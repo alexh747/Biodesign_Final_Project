@@ -64,6 +64,12 @@ def detect(protocol: Any, snapshots: Any) -> list[Recommendation]:
             i += 1
             continue
 
+        # Skip mixes: a `pipette.mix()` shows up as aspirate/dispense pairs
+        # from and into the same well. Those can't be batched.
+        if (a.slot, a.well) == (d.slot, d.well):
+            i += 1
+            continue
+
         chain_source = (a.slot, a.well)
         chain_vol = a.volume_ul or 0.0
         dests: list[str] = [f"{d.slot}/{d.well}"]
@@ -78,6 +84,9 @@ def detect(protocol: Any, snapshots: Any) -> list[Recommendation]:
             if not (a2.action == "aspirate" and d2.action == "dispense"):
                 break
             if (a2.slot, a2.well) != chain_source:
+                break
+            # Same skip rule for chained mixes.
+            if (a2.slot, a2.well) == (d2.slot, d2.well):
                 break
             dests.append(f"{d2.slot}/{d2.well}")
             chain_volumes.append(a2.volume_ul or 0.0)

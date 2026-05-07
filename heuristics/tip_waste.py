@@ -3,9 +3,13 @@ heuristics/tip_waste.py
 =======================
 Detect tips dropped between consecutive aspirations from the same source.
 
-A wasteful tip change is one where the source well of two surrounding
-aspirations is identical — meaning the tip was contaminated only by liquid
-it was about to re-aspirate, so dropping it added no contamination benefit.
+A tip change is wasteful when **both** conditions hold:
+  1. Two consecutive aspirations target the same (slot, well).
+  2. A `drop_tip` action occurred between those two aspirations.
+
+If condition 2 is missing, the protocol is using ONE tip for many transfers
+from the same source — that's the efficient pattern, not waste. (The
+batchable_transfers heuristic handles that separately.)
 
 Severity: medium (wastes plastic and time, doesn't break the protocol).
 """
@@ -17,43 +21,45 @@ from ..recommendation import Recommendation
 
 def detect(protocol: Any, snapshots: Any) -> list[Recommendation]:
     steps = protocol.steps
-    waste_runs: list[dict] = []   # accumulates {start_step, end_step, source, drops}
+    waste_runs: list[dict] = []
     current_run: dict | None = None
-    last_aspirate: tuple[str, str] | None = None  # (slot, well)
+
+    last_aspirate_source: tuple[str, str] | None = None
+    last_aspirate_step: int = -1
+    dropped_since_last_aspirate = False
 
     for step in steps:
         if step.action == "aspirate":
             source = (step.slot, step.well)
+            wasteful = (
+                dropped_since_last_aspirate
+                and last_aspirate_source == source
+            )
 
-            # If a tip was dropped/picked up between this and the previous
-            # aspirate AND the source is the same, it's wasteful.
-            if last_aspirate == source and current_run is not None:
-                current_run["drops"] += 1
-                current_run["end_step"] = step.step_index
-
-            elif last_aspirate == source:
-                # Started a new wasteful run.
-                current_run = {
-                    "start_step": step.step_index,
-                    "end_step": step.step_index,
-                    "source_slot": step.slot,
-                    "source_well": step.well,
-                    "drops": 1,
-                }
-                waste_runs.append(current_run)
-
+            if wasteful:
+                if current_run is None:
+                    current_run = {
+                        "start_step": last_aspirate_step,
+                        "end_step": step.step_index,
+                        "source_slot": step.slot,
+                        "source_well": step.well,
+                        "drops": 1,
+                    }
+                    waste_runs.append(current_run)
+                else:
+                    current_run["drops"] += 1
+                    current_run["end_step"] = step.step_index
             else:
-                # Different source — close any open run.
-                current_run = None
+                current_run = None  # streak broken
 
-            last_aspirate = source
+            last_aspirate_source = source
+            last_aspirate_step = step.step_index
+            dropped_since_last_aspirate = False
 
         elif step.action == "drop_tip":
-            # If we're between two aspirates of the same source, the next
-            # aspirate iteration will increment drops. Nothing to do here.
-            pass
+            dropped_since_last_aspirate = True
 
-    return [_run_to_recommendation(r) for r in waste_runs if r["drops"] >= 2]
+    return [_run_to_recommendation(r) for r in waste_runs]
 
 
 def _run_to_recommendation(run: dict) -> Recommendation:
@@ -64,8 +70,8 @@ def _run_to_recommendation(run: dict) -> Recommendation:
         step_index=run["start_step"],
         step_range=(run["start_step"], run["end_step"]),
         message=(
-            f"{drops} tip changes between aspirations from the same source "
-            f"({run['source_slot']}/{run['source_well']})."
+            f"{drops} wasteful tip change(s) between aspirations from the same "
+            f"source ({run['source_slot']}/{run['source_well']})."
         ),
         suggested_fix=(
             f"Replace the per-iteration pick_up_tip / drop_tip pair with a "
