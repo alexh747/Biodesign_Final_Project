@@ -30,17 +30,3 @@ From the **Final Project root**:
    ```
 
 3. Confirm the expected heuristic appears in `recommendations`.
-
-## What "blocked" means
-
-Two of the six are not fully testable as-is:
-
-- **pipette_range** — the heuristic's labware-name matching uses substrings
-  like `"300ul"`, but real simulator logs print `"300 µL"`. Fix in v2.
-- **tip_rack_exhaustion** — `opentrons_simulate` halts on the 97th pickup
-  attempt, so the log only contains 96 pickups. The heuristic counts log
-  events, sees 96 ≤ 96, and stays silent. A more robust v2 detects the
-  `OutOfTipsError` line in the raw stderr.
-
-These two are documented bugs, not silent regressions. Their failures
-*confirm* the v2 todo list.
