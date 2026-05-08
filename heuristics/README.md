@@ -44,16 +44,7 @@ The split mirrors the module's role title: optimization *and* error checking.
 - **`tip_waste`** can be over-eager when the same well coordinate holds
   *different* liquids across the protocol — currently treats well address
   as identity. Future fix: consume `protocol.liquid_map` for true identity.
-- **`pipette_range`** infers the pipette range from tiprack name substrings
-  like `"300ul"`, but real Opentrons log labware names print as
-  `"Opentrons OT-2 96 Tip Rack 300 µL"` (with `µ` and a space). The current
-  match misses these, so this detector is silent on real logs until the
-  pattern is fixed.
-- **`tip_rack_exhaustion`** counts pickup events in the parsed log, but
-  `opentrons_simulate` halts on the 97th pickup with `OutOfTipsError` and
-  emits no further actions. The detector sees 96 ≤ 96 and stays silent on
-  the very protocols it should catch. Future fix: also scan the raw log for
-  `OutOfTipsError`.
+
 
 ## Adding a new heuristic
 
