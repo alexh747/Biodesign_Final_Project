@@ -75,10 +75,3 @@ OptimizationAndErrorChecking/
 
 Severity values are `"high"`, `"med"`, or `"low"`. Recommendations are
 sorted high-severity first, then by step index ascending.
-
-## Status
-
-v1 — six heuristics implemented, three confirmed working on real logs
-(`tip_waste`, `volume_overflow`, `batchable_transfers`). Three currently
-silent or partially blocked; see [heuristics/README.md](heuristics/README.md)
-for the v2 todo list.
