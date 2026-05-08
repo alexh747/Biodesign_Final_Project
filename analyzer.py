@@ -17,10 +17,6 @@ import sys
 from typing import Any
 
 # ── Visualizer import (Member 3's package) ────────────────────────────────────
-# The visualizer currently lives at:
-#   Final Project/Visualization/FOR ALEX AND JOSH ON VISUALIZATION/visualizer/
-# This path manipulation is a v1 workaround. When the team agrees on a flat
-# project layout (or pip-installs the visualizer), this block goes away.
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _VIZ_PARENT = os.path.normpath(
     os.path.join(_HERE, "..", "Visualization", "FOR ALEX AND JOSH ON VISUALIZATION")
